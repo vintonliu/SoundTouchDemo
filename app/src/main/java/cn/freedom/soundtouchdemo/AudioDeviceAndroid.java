@@ -10,14 +10,18 @@ import android.media.audiofx.AcousticEchoCanceler;
 import android.media.audiofx.AudioEffect;
 import android.media.audiofx.PresetReverb;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Process;
 import android.util.Log;
 
+import com.ucpaas.ucsvqe.UcsVqeConfig;
+import com.ucpaas.ucsvqe.UcsVqeInterface;
+
 import net.surina.soundtouch.SoundTouch;
 
-import java.nio.ByteBuffer;
-
-import static android.media.AudioTrack.WRITE_NON_BLOCKING;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 
 /**
  * Created by vinton on 2017/10/09,0009.
@@ -34,6 +38,7 @@ public class AudioDeviceAndroid {
     private final static int sampleRate = 16000;
     private final static int maxBytesPerBuffer = bytesPerSample * 480;
     private final static int samplesPerBuffer = sampleRate / buffersPerSecond;
+    private final static int bytesPerBuffer = samplesPerBuffer * (bitsPerSample / 8);
 
     private AudioRecord mAudioRecord = null;
     private AudioTrack mAudioTrack = null;
@@ -51,9 +56,10 @@ public class AudioDeviceAndroid {
 
     private AcousticEchoCanceler mEchoCanceler = null;
     private PresetReverb mPresetReverb = null;
-
     private boolean useBuiltInAEC = false;
     private boolean usePresetReverb = false;
+
+    private FileOutputStream mFos = null;
 
     private class AudioRecordThread extends Thread {
         private volatile boolean keepAlive = true;
@@ -67,13 +73,20 @@ public class AudioDeviceAndroid {
 
             try {
                 int bytesInRead;
+                byte[] tempBuf = new byte[bytesPerBuffer];
                 while (keepAlive) {
                     bytesInRead = mAudioRecord.read(_tempBufRec, 0, recordSizePerBuffer);
 
                     if (bytesInRead == recordSizePerBuffer) {
+                        UcsVqeInterface.getInstance().UCSVQE_Process(_tempBufRec, bytesInRead, 10, tempBuf);
+                        try {
+                            mFos.write(tempBuf, 0, bytesInRead);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
 
                         // sound touch process
-                        mSoundTouch.putSamples(_tempBufRec, samplesPerBuffer);
+                        mSoundTouch.putSamples(tempBuf, samplesPerBuffer);
                     }
                 }
             } catch (Exception e) {
@@ -130,6 +143,7 @@ public class AudioDeviceAndroid {
                 if (samplesRecv > 0) {
 //                    Log.i(TAG, "samplesRecv = " + samplesRecv);
                     mAudioTrack.write(_tempBufPlay, 0, samplesRecv * bytesPerSample);
+                    UcsVqeInterface.getInstance().UCSVQE_FarendAnalysis(_tempBufPlay, samplesRecv * bytesPerSample);
                 }
 
 //                try {
@@ -183,8 +197,8 @@ public class AudioDeviceAndroid {
         playSizePerBuffer = bytesPerSample * (sampleRate / buffersPerSecond);
         Log.i(TAG, "playSizePerBuffer = " + playSizePerBuffer);
 
-        _tempBufPlay = new byte[maxBytesPerBuffer];
-        _tempBufRec = new byte[maxBytesPerBuffer];
+        _tempBufPlay = new byte[bytesPerBuffer];
+        _tempBufRec = new byte[bytesPerBuffer];
     }
 
     public boolean StartRecord() {
@@ -236,6 +250,15 @@ public class AudioDeviceAndroid {
             }
         }
 
+        UcsVqeConfig config = new UcsVqeConfig();
+        UcsVqeInterface.getInstance().UCSVQE_Init(UcsVqeConfig.kUcsSampleRate16kHz, config);
+
+        try {
+            mFos = new FileOutputStream(Environment.getExternalStorageDirectory().getPath() + "/STRecord.pcm");
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
         try {
             mAudioRecord.startRecording();
         } catch (IllegalStateException e) {
@@ -250,6 +273,7 @@ public class AudioDeviceAndroid {
 
     public boolean StopRecord() {
         Log.i(TAG, "StopRecord()");
+
         if (mRecordThread != null) {
             mRecordThread.joinThread();
             mRecordThread = null;
@@ -265,6 +289,18 @@ public class AudioDeviceAndroid {
             mAudioRecord.release();
             mAudioRecord = null;
         }
+
+        UcsVqeInterface.getInstance().UCSVQE_Closed();
+
+        if (mFos != null) {
+            try {
+                mFos.close();
+                mFos = null;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         Log.i(TAG, "StopRecord() finish");
         return true;
     }
@@ -300,7 +336,8 @@ public class AudioDeviceAndroid {
             return false;
         }
 
-//        mAudioManager.setSpeakerphoneOn(true);
+        mAudioManager.setSpeakerphoneOn(false);
+
         mPresetReverb = new PresetReverb(0, mAudioTrack.getAudioSessionId());
         mPresetReverb.setPreset(PresetReverb.PRESET_SMALLROOM);
         mPresetReverb.setEnabled(usePresetReverb);
