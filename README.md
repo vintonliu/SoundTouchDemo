@@ -1,0 +1,3 @@
+# SoundTouchDemo
+基于SoundTouch的变音Demo，AndroidStudio工程，支持实时语音变音处理
+将AudioRecord每10ms采集的数据输入到SoundTouch进行变音处理，处理后的数据经由AudioTrack实时播放
