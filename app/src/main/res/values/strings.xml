@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">SoundTouchDemo</string>
+    <string name="start">Start</string>
+    <string name="stop">Stop</string>
+    <string name="startTip">Start success!</string>
+    <string name="stopTip">Stop success!</string>
+</resources>
