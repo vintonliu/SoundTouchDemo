@@ -57,9 +57,10 @@ public class AudioDeviceAndroid {
     private AcousticEchoCanceler mEchoCanceler = null;
     private PresetReverb mPresetReverb = null;
     private boolean useBuiltInAEC = false;
-    private boolean usePresetReverb = false;
+    private boolean usePresetReverb = true;
 
     private FileOutputStream mFos = null;
+    private boolean isRecordFos = false;
 
     private class AudioRecordThread extends Thread {
         private volatile boolean keepAlive = true;
@@ -80,7 +81,9 @@ public class AudioDeviceAndroid {
                     if (bytesInRead == recordSizePerBuffer) {
                         UcsVqeInterface.getInstance().UCSVQE_Process(_tempBufRec, bytesInRead, 10, tempBuf);
                         try {
-                            mFos.write(tempBuf, 0, bytesInRead);
+                            if (isRecordFos) {
+                                mFos.write(tempBuf, 0, bytesInRead);
+                            }
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -253,10 +256,12 @@ public class AudioDeviceAndroid {
         UcsVqeConfig config = new UcsVqeConfig();
         UcsVqeInterface.getInstance().UCSVQE_Init(UcsVqeConfig.kUcsSampleRate16kHz, config);
 
-        try {
-            mFos = new FileOutputStream(Environment.getExternalStorageDirectory().getPath() + "/STRecord.pcm");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+        if (isRecordFos) {
+            try {
+                mFos = new FileOutputStream(Environment.getExternalStorageDirectory().getPath() + "/STRecord.pcm");
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
         }
 
         try {
@@ -292,7 +297,7 @@ public class AudioDeviceAndroid {
 
         UcsVqeInterface.getInstance().UCSVQE_Closed();
 
-        if (mFos != null) {
+        if (isRecordFos && mFos != null) {
             try {
                 mFos.close();
                 mFos = null;
