@@ -31,14 +31,14 @@ public class AudioDeviceAndroid {
     private final static String TAG = "AudioDeviceAndroid";
 
     private final static int channels = 1;
+    private final static int sampleRate = 16000;
     private final static int bitsPerSample = 16;
+
     private final static int bytesPerSample = channels * (bitsPerSample / 8);
     /* per 10 ms callback, 1000 / 10 */
     private final static int buffersPerSecond = 100;
-    private final static int sampleRate = 16000;
-    private final static int maxBytesPerBuffer = bytesPerSample * 480;
-    private final static int samplesPerBuffer = sampleRate / buffersPerSecond;
-    private final static int bytesPerBuffer = samplesPerBuffer * (bitsPerSample / 8);
+    private final static int samplesPer10ms = sampleRate / buffersPerSecond;
+    private final static int bytesPer10ms = samplesPer10ms * bytesPerSample;
 
     private AudioRecord mAudioRecord = null;
     private AudioTrack mAudioTrack = null;
@@ -74,7 +74,7 @@ public class AudioDeviceAndroid {
 
             try {
                 int bytesInRead;
-                byte[] tempBuf = new byte[bytesPerBuffer];
+                byte[] tempBuf = new byte[bytesPer10ms];
                 while (keepAlive) {
                     bytesInRead = mAudioRecord.read(_tempBufRec, 0, recordSizePerBuffer);
 
@@ -89,7 +89,7 @@ public class AudioDeviceAndroid {
                         }
 
                         // sound touch process
-                        mSoundTouch.putSamples(tempBuf, samplesPerBuffer);
+                        mSoundTouch.putSamples(tempBuf, samplesPer10ms);
                     }
                 }
             } catch (Exception e) {
@@ -141,19 +141,13 @@ public class AudioDeviceAndroid {
 
             int samplesRecv;
             while(keepAlive){
-                samplesRecv = mSoundTouch.receivedSamples(_tempBufPlay, samplesPerBuffer);
+                samplesRecv = mSoundTouch.receivedSamples(_tempBufPlay, samplesPer10ms);
 
                 if (samplesRecv > 0) {
 //                    Log.i(TAG, "samplesRecv = " + samplesRecv);
                     mAudioTrack.write(_tempBufPlay, 0, samplesRecv * bytesPerSample);
                     UcsVqeInterface.getInstance().UCSVQE_FarendAnalysis(_tempBufPlay, samplesRecv * bytesPerSample);
                 }
-
-//                try {
-//                    Thread.sleep(2);
-//                } catch (InterruptedException e) {
-//                    e.printStackTrace();
-//                }
             }
 
             try {
@@ -194,14 +188,14 @@ public class AudioDeviceAndroid {
 //        mSoundTouch.setSetting(SoundTouch.SETTING_SEEKWINDOW_MS, 5);
 //        mSoundTouch.setSetting(SoundTouch.SETTING_OVERLAP_MS, 4);
 
-        recordSizePerBuffer = bytesPerSample * (sampleRate / buffersPerSecond);
+        recordSizePerBuffer = bytesPer10ms;
         Log.i(TAG, "recordSizePerBuffer = " + recordSizePerBuffer);
 
-        playSizePerBuffer = bytesPerSample * (sampleRate / buffersPerSecond);
+        playSizePerBuffer = bytesPer10ms;
         Log.i(TAG, "playSizePerBuffer = " + playSizePerBuffer);
 
-        _tempBufPlay = new byte[bytesPerBuffer];
-        _tempBufRec = new byte[bytesPerBuffer];
+        _tempBufPlay = new byte[bytesPer10ms];
+        _tempBufRec = new byte[bytesPer10ms];
     }
 
     public boolean StartRecord() {
@@ -376,38 +370,46 @@ public class AudioDeviceAndroid {
         Log.i(TAG, "StopPlayout() finish");
     }
 
-    public void setTempoChange(float tempo) {
+    public void SetTempoChange(float tempo) {
         mSoundTouch.setTempoChange(tempo);
     }
 
-    public void setPitchSemiTones(float pitch) {
+    public void SetPitchSemiTones(float pitch) {
         mSoundTouch.setPitchSemiTones(pitch);
     }
 
-    public void setRateChange(float speed) {
+    public void SetRateChange(float speed) {
         mSoundTouch.setRateChange(speed);
     }
 
-    public boolean setSetting(int settingId, int value) {
+    public boolean SetSetting(int settingId, int value) {
         return mSoundTouch.setSetting(settingId, value);
     }
 
-    public int getSetting(int settingId) {
+    public int GetSetting(int settingId) {
         return mSoundTouch.getSetting(settingId);
     }
 
-    public static boolean runningOnJellyBeanOrHigher() {
+    public static boolean RunningOnJellyBeanOrHigher() {
         return Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN;
     }
 
     public static boolean BuiltInAECIsAvailable() {
         // AcousticEchoCanceler was added in API level 16 (Jelly Bean).
-        if (!runningOnJellyBeanOrHigher()) {
+        if (!RunningOnJellyBeanOrHigher()) {
             return false;
         }
         // TODO(henrika): add black-list based on device name. We could also
         // use uuid to exclude devices but that would require a session ID from
         // an existing AudioRecord object.
          return AcousticEchoCanceler.isAvailable();
+    }
+
+    public void Destory() {
+        StopRecord();
+        StopPlayout();
+
+        mSoundTouch.close();
+        mSoundTouch = null;
     }
 }
