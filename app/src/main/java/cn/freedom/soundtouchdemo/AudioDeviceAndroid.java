@@ -335,11 +335,11 @@ public class AudioDeviceAndroid {
             return false;
         }
 
-        mAudioManager.setSpeakerphoneOn(false);
+        mAudioManager.setSpeakerphoneOn(true);
 
-        mPresetReverb = new PresetReverb(0, mAudioTrack.getAudioSessionId());
-        mPresetReverb.setPreset(PresetReverb.PRESET_SMALLROOM);
-        mPresetReverb.setEnabled(usePresetReverb);
+//        mPresetReverb = new PresetReverb(0, mAudioTrack.getAudioSessionId());
+//        mPresetReverb.setPreset(PresetReverb.PRESET_SMALLROOM);
+//        mPresetReverb.setEnabled(usePresetReverb);
 
         try {
             mAudioTrack.play();

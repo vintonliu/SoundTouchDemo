@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/SoundTouchDemo.iml" filepath="$PROJECT_DIR$/SoundTouchDemo.iml" />
-      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/SoundTouchDemo.iml" filepath="$PROJECT_DIR$/.idea/modules/SoundTouchDemo.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/SoundTouchDemo.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/SoundTouchDemo.app.iml" />
     </modules>
   </component>
 </project>

@@ -1,8 +1,13 @@
 package cn.freedom.soundtouchdemo;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -11,9 +16,15 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener{
+import java.util.ArrayList;
+import java.util.List;
 
+public class MainActivity extends AppCompatActivity implements View.OnClickListener,
+        ActivityCompat.OnRequestPermissionsResultCallback {
+
+    private static final int PERMISSION_REQUEST_CODE = 100;
     private Button btnStop = null;
     private Button btnStart = null;
     private EditText editTextTempo = null;
@@ -41,8 +52,40 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         editTextSpeed = (EditText)findViewById(R.id.editTextSpeed);
 
         txtViewShow = (TextView)findViewById(R.id.txtViewShow);
+
+        String[] permissions = { Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.RECORD_AUDIO};
+
+        String[] unGranted = getUngrantedPermissions(permissions);
+        if (unGranted.length > 0) {
+            ActivityCompat.requestPermissions(this, unGranted, PERMISSION_REQUEST_CODE);
+        }
+
     }
 
+    private String[] getUngrantedPermissions(String[] allPermission) {
+        List<String> result = new ArrayList<String>();
+        for (int i = 0; i < allPermission.length; i++) {
+            int permissionCheck = ContextCompat.checkSelfPermission(this, allPermission[i]);
+            if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
+                result.add(allPermission[i]);
+            }
+        }
+        return result.toArray(new String[result.size()]);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSION_REQUEST_CODE:
+                Toast.makeText(this, "权限申请成功", Toast.LENGTH_SHORT).show();
+                break;
+
+            default:
+                break;
+        }
+    }
 
     @Override
     public void onClick(View v) {
